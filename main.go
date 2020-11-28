@@ -4,7 +4,8 @@ import (
 	"gindemo/common"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
-
+	"github.com/spf13/viper"
+	"os"
 )
 
 
@@ -12,6 +13,7 @@ import (
 
 
 func main() {
+	InitConfig()
 	db := common.InitDB()
 	defer db.Close()
 
@@ -19,8 +21,26 @@ func main() {
 	
 	r = CollectRoute(r)
 
+	port := viper.GetString("server.port")
 
-	r.Run(":8080")
+	if port  != ""{
+		 panic(r.Run(":" + port))
+	}
+
+	r.Run()
+}
+
+func InitConfig(){
+
+	workDir,_ := os.Getwd()
+	viper.SetConfigName("application")
+	viper.SetConfigType("yml")
+	viper.AddConfigPath(workDir + "/config")
+	err := viper.ReadInConfig()
+
+	if err != nil {
+		panic(err)
+	}
 }
 
 

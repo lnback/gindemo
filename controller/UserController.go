@@ -4,6 +4,7 @@ import (
 	"gindemo/common"
 	"gindemo/dto"
 	"gindemo/model"
+	"gindemo/response"
 	"gindemo/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -21,18 +22,12 @@ func Register(context *gin.Context) {
 	password := context.PostForm("password")
 
 	if len(telephone) < 11{
-		context.JSON(http.StatusUnprocessableEntity,gin.H{
-			"code":422,
-			"msg":"电话少于11位",
-		})
+		response.Response(context,http.StatusUnprocessableEntity,422,nil,"电话少于11位")
 		return
 	}
 
 	if len(password) < 6{
-		context.JSON(http.StatusUnprocessableEntity,gin.H{
-			"code":422,
-			"msg":"密码少于6位",
-		})
+		response.Response(context,http.StatusUnprocessableEntity,422,nil,"密码少于6位")
 		return
 	}
 
@@ -48,10 +43,7 @@ func Register(context *gin.Context) {
 
 
 	if isTelephoneExist(db,telephone){
-		context.JSON(http.StatusUnprocessableEntity,gin.H{
-			"code":422,
-			"msg":"用户已经存在",
-		})
+		response.Response(context,http.StatusUnprocessableEntity,422,nil,"用户已经存在")
 		return
 	}
 	newUser := model.User{
@@ -62,9 +54,7 @@ func Register(context *gin.Context) {
 	}
 
 	db.Create(&newUser)
-	context.JSON(http.StatusOK,gin.H{
-		"msg":"注册成功",
-	})
+	response.Success(context,nil,"注册成功")
 }
 
 func Login(context * gin.Context)  {
@@ -75,18 +65,12 @@ func Login(context * gin.Context)  {
 
 
 	if len(telephone) < 11{
-		context.JSON(http.StatusUnprocessableEntity,gin.H{
-			"code":422,
-			"msg":"电话少于11位",
-		})
+		response.Response(context,http.StatusUnprocessableEntity,422,nil,"电话少于11位")
 		return
 	}
 
 	if len(password) < 6{
-		context.JSON(http.StatusUnprocessableEntity,gin.H{
-			"code":422,
-			"msg":"密码少于6位",
-		})
+		response.Response(context,http.StatusUnprocessableEntity,422,nil,"密码少于6位")
 		return
 	}
 
@@ -95,11 +79,7 @@ func Login(context * gin.Context)  {
 	db.Where("telephone=?",telephone).First(&user)
 
 	if user.ID == 0{
-		context.JSON(http.StatusUnprocessableEntity,gin.H{
-			"code":422,
-			"msg":"用户不存在",
-
-		})
+		response.Response(context,http.StatusUnprocessableEntity,422,nil,"用户不存在")
 		return
 	}
 
@@ -108,34 +88,22 @@ func Login(context * gin.Context)  {
 			"code":400,
 			"msg":"密码错误",
 		})
+		response.Response(context,http.StatusUnprocessableEntity,400,nil,"密码错误")
 		return
 	}
 
 	token,err := common.ReleaseToken(user)
 
 	if err != nil{
-		context.JSON(http.StatusInternalServerError,gin.H{
-			"code":500,
-			"msg":"系统异常",
-		})
-		log.Printf("token generate error : %v",err)
+		response.Response(context,http.StatusUnprocessableEntity,500,nil,"系统异常")
 		return
 	}
-	context.JSON(http.StatusOK,gin.H{
-		"code":200,
-		"data":gin.H{
-			"token":token,
-		},
-		"msg":"登陆成功",
-	})
+
+	response.Response(context,http.StatusUnprocessableEntity,200,gin.H{"token":token},"登录成功")
 
 
-	context.JSON(http.StatusOK,gin.H{
 
-		"code":200,
-		"data":gin.H{"token":token},
-		"msg":"登录成功",
-	})
+
 }
 
 func Info(ctx *gin.Context)  {
