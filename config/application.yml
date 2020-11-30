@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8081
 datasource:
   driverName: mysql
   host: 192.168.33.30
@@ -8,3 +8,4 @@ datasource:
   username: root
   password: 123456
   charset: utf8
+  loc: Asia/Shanghai

@@ -8,6 +8,7 @@ import (
 	"gindemo/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
+	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
 )
@@ -16,11 +17,15 @@ func Register(context *gin.Context) {
 
 	db := common.GetDB()
 
+	var user = model.User{}
 
-	name := context.PostForm("name")
-	telephone := context.PostForm("telephone")
-	password := context.PostForm("password")
+	context.BindJSON(&user)
 
+	name := user.Name
+	telephone := user.Telephone
+	password := user.Password
+
+	
 	if len(telephone) < 11{
 		response.Response(context,http.StatusUnprocessableEntity,422,nil,"电话少于11位")
 		return
@@ -46,22 +51,41 @@ func Register(context *gin.Context) {
 		response.Response(context,http.StatusUnprocessableEntity,422,nil,"用户已经存在")
 		return
 	}
+
+	hashPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		response.Response(context, http.StatusUnprocessableEntity, 500, nil, "加密失败")
+		return
+	}
+
 	newUser := model.User{
 
 		Name: name,
 		Telephone: telephone,
-		Password: password,
+		Password: string(hashPassword),
 	}
 
 	db.Create(&newUser)
-	response.Success(context,nil,"注册成功")
+	token, err := common.ReleaseToken(newUser)
+	if err != nil {
+		response.Response(context, http.StatusUnprocessableEntity, 500, nil, "系统异常")
+		log.Printf("token generate error: %v", err)
+		return
+	}
+
+	//返回结果
+	response.Success(context, gin.H{"token": token}, "注册成功")
 }
 
 func Login(context * gin.Context)  {
 
 	db := common.GetDB()
-	telephone := context.PostForm("telephone")
-	password := context.PostForm("password")
+	var user = model.User{}
+
+	context.BindJSON(&user)
+
+	telephone := user.Telephone
+	password := user.Password
 
 
 	if len(telephone) < 11{
@@ -74,21 +98,16 @@ func Login(context * gin.Context)  {
 		return
 	}
 
-	var user model.User
 
 	db.Where("telephone=?",telephone).First(&user)
 
 	if user.ID == 0{
-		response.Response(context,http.StatusUnprocessableEntity,422,nil,"用户不存在")
+		response.Response(context,http.StatusUnprocessableEntity,400,nil,"用户不存在")
 		return
 	}
 
-	if user.Password != password {
-		context.JSON(http.StatusBadRequest,gin.H{
-			"code":400,
-			"msg":"密码错误",
-		})
-		response.Response(context,http.StatusUnprocessableEntity,400,nil,"密码错误")
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+		response.Response(context, http.StatusBadRequest, 400, nil, "密码错误")
 		return
 	}
 
@@ -99,7 +118,7 @@ func Login(context * gin.Context)  {
 		return
 	}
 
-	response.Response(context,http.StatusUnprocessableEntity,200,gin.H{"token":token},"登录成功")
+	response.Response(context,http.StatusOK,200,gin.H{"token":token},"登录成功")
 
 
 
